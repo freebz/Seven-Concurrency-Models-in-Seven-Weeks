@@ -1,0 +1,6 @@
+com\paulbutcher\Words$WordIterator.class
+com\paulbutcher\Words.class
+com\paulbutcher\Pages$PageIterator.class
+com\paulbutcher\Pages.class
+com\paulbutcher\Page.class
+com\paulbutcher\WordCount.class

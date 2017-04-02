@@ -1,0 +1,10 @@
+com\paulbutcher\Counter.class
+com\paulbutcher\Words$WordIterator.class
+com\paulbutcher\Pages$PageIterator.class
+com\paulbutcher\Page.class
+com\paulbutcher\WordCount.class
+com\paulbutcher\PoisonPill.class
+com\paulbutcher\Words.class
+com\paulbutcher\Pages.class
+com\paulbutcher\Parser.class
+com\paulbutcher\WikiPage.class
