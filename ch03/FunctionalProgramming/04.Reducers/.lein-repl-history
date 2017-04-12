@@ -1,0 +1,72 @@
+(defn my-reduce
+  ([f coll] (coll-reduce coll f))
+  ([f init coll] (coll-reduce coll f init)))
+(my-reduce + [1 2 3 4])
+(my-reduce + 10 [1 2 3 4])
+(defn make-reducer [reducible transformf]
+  (reify
+    CollReduce
+    (coll-reduce [_ f1]
+      (coll-reduce reducible (transformf f1) (f1)))
+    (coll-reduce [_ f1 init]
+      (coll-reduce reducible (transformf f1) init))))
+(defn my-map [mapf reducible]
+  (make-reducer reducible
+                (fn [reducef]
+                  (fn [acc v]
+                    (reducef acc (mapf v))))))
+(fn [reducef]
+  (fn [acc v]
+    (reducef acc (mapf v))))
+(into [] (my-map (partial * 2) [1 2 3 4]))
+(into [] (my-map (partial + 1) [1 2 3 4]))
+(into [] (my-map (partial * 2) (my-map (partial + 1) [1 2 3 4])))
+(defprotocol CollFold
+  (coll-fold [coll n combinef reducef]))
+(defn my-fold
+  ([reducef coll]
+   (my-fold reducef reducef coll))
+  ([combinef reducef coll]
+   (my-fold 512 combinef reducef coll))
+  ([n combine reducef coll]
+   (coll-fold coll n combinef reducef)))
+(def v (into [] (range 10000)))
+(my-fold + v)
+(my-fold + (my-map (partial * 2) v))
+(defn parallel-frequencies [coll]
+  (r/fold
+   (partial merge-with +)
+   (fn [counts x] (assoc counts x (inc (get counts x 0))))
+   coll))
+(take 10 (repeatedly #(rand-int 10)))
+(def numbers (into [] (take 10000000 (repeatedly #(rand-int 10)))))
+(require ['reducers.parallel-frequencies :refer :all])
+(time (frequencies numbers))
+(time (parallel-frequencies numbers))
+(reduce + (map (partial * 2) (range 10000)))
+(reduce + (doall (map (partial * 2) (range 10000))))
+(reduce + (pmap (partial * 2) (range 10000)))
+(reduce + (r/map (partial * 2) (range 10000)))
+(require clojure.core.reducers :as r)
+(require [clojure.core.reducers :as r])
+(ns sum.core require [clojure.core.reducers :as r]))
+(ns sum.core :require [clojure.core.reducers :as r]))
+(:require [clojure.core.reducers :as r])
+(reduce + (r/map (partial * 2) (range 10000)))
+(reduce + (clojure.core.reducers/map (partial * 2) (range 10000)))
+(require '[clojure.core.reducers :as r])
+(reduce + (r/map (partial * 2) (range 10000)))
+(r/fold + (r/map (partial * 2) (into [] (range 10000))))
+(+ 1 (+ 2 3))
+(def sum (future (+ 1 2 3 4 5)))
+sum
+(deref sum)
+@sum
+sum
+(let [a (future (+ 1 2))
+      b (future (+ 3 4))]
+  (+ @a @b))
+(def meaning-of-life (promise))
+(future (println "The meaning of life is:" @meaning-of-life))
+(deliver meaning-of-life 42)
+exit

@@ -1,0 +1,21 @@
+(def pages ["one potato two potato three potato four"
+            "five potato six potato seven potato more"])
+(pmap #(frequencies (get-words %)) pages)
+(def merge-counts (partial merge-with +))
+(merge-counts {:x 1 :y 2} {:y 1 :z 1})
+(defn count-words-parallel [pages]
+  (reduce (partial merge-with +)
+          (pmap #(frequencies (get-words %)) pages)))
+(defn count-words [pages]
+  (reduce (partial merge-with +)
+          (pmap count-words-sequential (partition-all 100 pages))))
+(partition-all 4 [1 2 3 4 5 6 7 8 9 10])
+(map (partial * 2) [1 2 3 4])
+(require '[clojure.core.reducers :as r])
+(r/map (partial * 2) [1 2 3 4])
+(reduce conj [] (r/map (partial * 2) [1 2 3 4]))
+(into [] (r/map (partial * 2) [1 2 3 4]))
+(into [] (r/map (partial + 1) (r/filter even? [1 2 3 4])))
+(defprotocol CollReduce
+  (coll-reduce [coll f] [coll f init]))
+exit
