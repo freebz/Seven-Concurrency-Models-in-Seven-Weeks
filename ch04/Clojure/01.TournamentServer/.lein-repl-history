@@ -1,0 +1,17 @@
+(def players (atom ()))
+(defn list-players []
+  (response (json/encode @players)))
+(defn create-player [player-name]
+  (swap! players conj player-name)
+  (status (response "") 201))
+(defroutes app-routes
+  (GET "/players" [] (list-players))
+  (PUT "/players/:player-name" [player-name] (create-player player-name)))
+(defn -main [& args]
+  (run-jetty (site app-routes) {:port 3000}))
+(-main)
+(def mapv1 {:name "paul" :age 45})
+(def mapv2 (assoc mapv1 :sex :male))
+mapv1
+mapv2
+(def listv1 (list 1 2 3))
