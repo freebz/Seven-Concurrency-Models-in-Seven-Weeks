@@ -1,0 +1,17 @@
+(def ch (to-chan (iterate inc 0)))
+(poll-fn 10 #(println "Read:" (<! ch)))
+(defmacro poll [interval & body]
+  `(let [seconds# (* ~interval 1000)]
+     (go (while true
+           (do ~@body)
+           (<! (timeout seconds#))))))
+(poll 10
+      (println "Polling at:" (System/currentTimeMillis))
+      (println (<! ch)))
+(exit)
+(macroexpand-1
+ '(poll 10
+        (pirntln "Polling at:" (System/currentTimeMillis))
+        (println (<! ch))))
+(require '[org.httpkit.client :as http])
+(exit)

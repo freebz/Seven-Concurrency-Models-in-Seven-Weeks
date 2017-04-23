@@ -1,0 +1,87 @@
+(require '[org.httpkit.client :as http])
+(defn handle-response [response]
+  (let [url (get-in response [:opts :url])
+        status (:status response)]
+    (println "Fetched:" url "with status:" status)))
+(http/get "http://paulbutcher.com/" handle-response)
+(defn http-get [url]
+  (let [ch (chan)]
+    (http/get url (fn [response]
+                    (if (= 200 (:status response))
+                      (put! ch response)
+                      (do (print-error response) (close! ch)))))
+    ch))
+(defn http-get [url]
+  (let [ch (chan)]
+    (http/get url (fn [response]
+                    (if (= 200 (:status response))
+                      (put! ch response)
+                      (do (print-error response) (close! ch)))))
+    ch))
+(def poll-interval 60)
+(defn poll-feed [url]
+  (let [ch (chan)]
+    (poll poll-interval
+          (when-let [response (<! (http-get url))]
+            (let [feed (parse-feed (:body response))]
+              (onto-chan ch (get-links feed) false))))
+    ch))
+(ns wordcount.feed)
+(def feed (pool-feed "http://www.cbsnews.com/feeds/rss/main.rss"))
+(exit)
+(ns wordcount.feed)
+(def feed (pool-feed "http://www.cbsnews.com/feeds/rss/main.rss"))
+(defmacro poll [interval & body]
+  `(let [seconds# (* ~interval 1000)]
+     (go (while true
+           (do ~@body)
+           (<! (timeout seconds#))))))
+(defn http-get [url]
+  (let [ch (chan)]
+    (http/get url (fn [response]
+                    (if (= 200 (:status response))
+                      (put! ch response)
+                      (do (print-error response) (close! ch)))))
+    ch))
+(def poll-interval 60)
+(defn poll-feed [url]
+  (let [ch (chan)]
+    (poll poll-interval
+          (when-let [response (<! (http-get url))]
+            (let [feed (parse-feed (:body response))]
+              (onto-chan ch (get-links feed) false))))
+    ch))
+(def feed (pool-feed "http://www.cbsnews.com/feeds/rss/main.rss"))
+(def feed (poll-feed "http://www.cbsnews.com/feeds/rss/main.rss"))
+(loop []
+  (when-let [url (<!! feed)]
+    (println url)
+    (recur)))
+(defn new-links [url]
+  (let [in (poll-feed url)
+        out (chan)]
+    (go-loop [links #{}]
+      (let [link (<! in)]
+        (if (contains? links link)
+          (recur links)
+          (do
+            (>! out link)
+            (recur (conj links link))))))
+    out))
+(defn get-counts [urls]
+  (let [counts (chan)]
+    (go (while true
+          (let [url (<! urls)]
+            (when-let [response (<! (http-get url))]
+              (let [c (count (get-words (:body response)))]
+                (>! counts [url c]))))))
+    counts))
+(defn -main [feeds-file]
+  (with-open [rdr (io/reader feeds-file)]
+    (let [feed-urls (line-seq rdr)
+          article-urls (doall (map new-links feed-urls))
+          article-counts (doall (map get-counts article-urls))
+          counts (async/merge article-counts)]
+      (while true
+        (println (<!! counts))))))
+(exit)

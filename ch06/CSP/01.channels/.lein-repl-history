@@ -1,0 +1,103 @@
+(ns channels.core
+  (:require [clojure.core.async :as async :refer :all
+             :exclude [map into reduce merge partition partition-by take]]))
+(def c (chan))
+(thread (println "Read:" (<!! c) "from c"))
+(>!! c "Hello thread")
+(thread (>!! c "Hello") (println "Write completed"))
+(<!! c)
+(def bc (chan 5))
+(>!! bc 0)
+(>!! bc 1)
+(close! bc)
+(<!! bc)
+(>!! (chan) nil)
+(defn readall!! [ch]
+  (loop [coll []]
+    (if-let [x (<!! ch)]
+      (recur (conj coll x))
+      coll)))
+(defn writeall!! [ch coll]
+  (doseq [x coll]
+    (>!! ch x))
+  (close! ch))
+(def ch (chan 10))
+(writeall!! ch (range 0 10))
+(readall!! ch)
+(def ch (chan 10))
+(writeall!! ch (range 0 10))
+(def ch (chan 10))
+(onto-chan ch (range 0 10))
+(<!! (async/into [] ch))
+(def dc (chan (dropping-buffer 5)))
+(onto-chan dc (range 0 10))
+(<!! (async/into [] dc))
+(def sc (chan (sliding-buffer 5)))
+(onto-chan sc (range 0 10))
+(<!! (async/into [] sc))
+(def ch (chan))
+(go
+  (let [x (<! ch)
+        y (<! ch)]
+    (println "Sum:" (+ x y))))
+(>!! ch 3)
+(>!! ch 4)
+(<!! (go (+ 3 4)))
+nilSum:
+(defn go-add [x y]
+  (<!! (nth (iterate #(go (inc (<! %))) (go x)) y)))
+(time (go-add 10 10))
+(time (go-add 10 1000))
+(time (go-add 10 100000))
+(defn map-chan [f from]
+  (let [to (chan)]
+    (go-loop []
+      (when-let [x (<! from)]
+        (>! to (f x))
+        (recur))
+      (close! to))
+    to))
+(def ch (chan 10))
+(def mapped (map-chan (partial * 2) ch))
+(onto-chan ch (range 0 10))
+(<!! (async/into [] mapped))
+(def ch (to-chan (recur 0 10)))
+(def ch (to-chan (range 0 10)))
+(<!! (async/into [] (map< (partial * 2) (filter< even? ch))))
+(defn factor? [x y]
+  (zero? (mod y x)))
+(factor? 10 2)
+(factor? 2 10)
+(defn get-primes [limit]
+  (let [primes (chan)
+        numbers (to-chan (range 2 limit))]
+    (go-loop [ch numbers]
+      (when-let [prime (<! ch)]
+        (>! primes prime)
+        (recur (remove< (partial factor? prime) ch)))
+      (close! primes))
+    primes))
+(defn -main [limit]
+  (let [primes (get-primes (edn/read-string limit))]
+    (loop []
+      (when-let [prime (<!! primes)]
+        (println prime)
+        (recur)))))
+(-main)
+(exit)
+(def ch1 (chan))
+(def ch2 (chan))
+(go-loop []
+  (alt!
+    ch1 ([x] (println "Read" x "from channel 1"))
+    ch2 ([x] (println "Twice" x "is" (* x 2))))
+  (recur))
+(>!! ch1 "foo")
+(>!! ch2 21)
+(time (<!! (timeout 10000)))
+(def ch (chan))
+(let [t (timeout 10000)]
+  (go (alt!
+        ch ([x] (println "Read" x "from channel"))
+        t (println "Timed out"))))
+(exit)
